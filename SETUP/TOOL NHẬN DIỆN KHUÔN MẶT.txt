@@ -1,0 +1,1260 @@
+----------- SET UP ------------------------------------------------------------------
+Bắt buộc cài python phiên bản 3.10.9 trở xuống (bản cũ 3.13.3 đã gỡ)
+Bắt buộc cài numpy 1.26.3 (bản cũ 2.2.6 đã gỡ)
+Tạo môi trường ảo python -m venv venv
+Chạy môi trường ảo venv\Scripts\activate
+Cài cmake trên web https://cmake.org/download/
+Cài thư viện dlib: https://github.com/z-mahmud22/Dlib_Windows_Python3.x
+  1. Tải file đúng với version python
+  vd: cp310 = python 3.10
+  2. Cài thư viện cho môi trường chính Python global (toàn cục)
+  Vào folder nơi file nằm gõ trên link "cmd" enter rồi chạy lệnh
+  D:\Project Python> pip install dlib-19.22.99-cp310-cp310-win_amd64.whl
+  3. Cài thư viện cho môi trường ảo
+  Kích hoạt môi trường ảo: venv\Scripts\activate
+  Vào Terminal gõ:
+  (venv) PS D:\Project Python\nhan-dang-khuon-mat> pip install D:\Project Python\dlib-19.22.99-cp310-cp310-win_amd64.whl
+  Chạy pip list xem đủ các thư viện chính chưa
+  pip install numpy==1.26.3 
+  (cài numpy 1.26.3 để mở cam, version cao hơn 2.x sẽ báo lỗi vd:2.2.6 )
+  pip install opencv-python
+  pip install cmake
+  pip install dlib
+  pip install face_recognition
+
+FIX LỖI RuntimeError: Unsupported image type, must be 8bit gray or RGB image.
+Gỡ phiên bản numpy 2.2.6 bằng lệnh pip uninstall numpy -y
+Cài lại phiên bản 1.26.3 bằng lệnh pip install numpy==1.26.3
+
+CHẠY CODE FIRST
+
+import face_recognition
+import cv2
+import os
+from PIL import ImageFont, ImageDraw, Image
+import numpy as np
+
+# Đọc ảnh trong thư mục known_faces
+known_face_encodings = []
+known_face_names = []
+
+known_dir = "known_faces"
+for filename in os.listdir(known_dir):
+    if filename.endswith(".jpg") or filename.endswith(".png"):
+        image_path = os.path.join(known_dir, filename)
+        image = face_recognition.load_image_file(image_path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            known_face_encodings.append(encodings[0])
+            name = os.path.splitext(filename)[0]
+            known_face_names.append(name)
+
+# Khởi tạo webcam
+cap = cv2.VideoCapture(0)
+
+# Font hỗ trợ tiếng Việt
+font_path = "arial.ttf"  # Đảm bảo file này tồn tại trong thư mục hiện tại
+font_pil = ImageFont.truetype(font_path, 32)
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Resize để tăng tốc độ
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+    # Tìm khuôn mặt
+    face_locations = face_recognition.face_locations(rgb_small_frame)
+    face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+    found_name = ""
+    found = False
+
+    for face_encoding in face_encodings:
+        matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+        name = "Unknown"
+
+        if True in matches:
+            first_match_index = matches.index(True)
+            name = known_face_names[first_match_index]
+            found = True
+            found_name = name
+
+    # Vẽ khung quanh khuôn mặt
+    for (top, right, bottom, left) in face_locations:
+        top *= 4
+        right *= 4
+        bottom *= 4
+        left *= 4
+        color = (0, 255, 0) if found else (0, 0, 255)
+        cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+
+    # Sử dụng PIL để hiển thị tiếng Việt
+    frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(frame_pil)
+
+    # Thông báo trạng thái
+    status_text = "Thành công" if found else "Không tìm thấy"
+    draw.text((10, 10), status_text, font=font_pil, fill=(0, 255, 0) if found else (255, 0, 0))
+
+    # Tên người được nhận diện hiển thị góc phải
+    if found_name:
+        draw.text((frame.shape[1] - 300, 10), found_name, font=font_pil, fill=(0, 255, 0))
+
+    # Chuyển lại sang OpenCV
+    frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
+
+    # Hiển thị
+    cv2.imshow("Nhan dien khuon mat", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+CODE ĐÃ CĂN CHỈNH VỊ TRÍ TÊN LÊN GÓC PHẢI
+
+import face_recognition
+import cv2
+import os
+from PIL import ImageFont, ImageDraw, Image
+import numpy as np
+
+# Đọc ảnh trong thư mục known_faces
+known_face_encodings = []
+known_face_names = []
+
+known_dir = "known_faces"
+for filename in os.listdir(known_dir):
+    if filename.endswith(".jpg") or filename.endswith(".png"):
+        image_path = os.path.join(known_dir, filename)
+        image = face_recognition.load_image_file(image_path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            known_face_encodings.append(encodings[0])
+            name = os.path.splitext(filename)[0]
+            known_face_names.append(name)
+
+# Khởi tạo webcam
+cap = cv2.VideoCapture(0)
+
+# Font hỗ trợ tiếng Việt
+font_path = "arial.ttf"  # Đảm bảo file này tồn tại trong thư mục hiện tại
+font_pil = ImageFont.truetype(font_path, 32)
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Resize để tăng tốc độ
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+    # Tìm khuôn mặt
+    face_locations = face_recognition.face_locations(rgb_small_frame)
+    face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+    found_name = ""
+    found = False
+
+    for face_encoding in face_encodings:
+        matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+        name = "Unknown"
+
+        if True in matches:
+            first_match_index = matches.index(True)
+            name = known_face_names[first_match_index]
+            found = True
+            found_name = name
+
+    # Vẽ khung quanh khuôn mặt
+    for (top, right, bottom, left) in face_locations:
+        top *= 4
+        right *= 4
+        bottom *= 4
+        left *= 4
+        color = (0, 255, 0) if found else (0, 0, 255)
+        cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+
+    # Sử dụng PIL để hiển thị tiếng Việt
+    frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(frame_pil)
+
+    # Thông báo trạng thái
+    status_text = "Thành công" if found else "Không tìm thấy"
+    draw.text((10, 10), status_text, font=font_pil, fill=(0, 255, 0) if found else (255, 0, 0))
+
+    # Tên người được nhận diện hiển thị sát góc phải
+    if found_name:
+        bbox = draw.textbbox((0, 0), found_name, font=font_pil)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        x = frame.shape[1] - text_width - 10
+        y = 10
+        draw.text((x, y), found_name, font=font_pil, fill=(0, 255, 0))
+
+
+    # Chuyển lại sang OpenCV
+    frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
+
+    # Hiển thị
+    cv2.imshow("Nhan dien khuon mat", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+CODE TỐI ƯU ĐỠ CHẬM HƠN CHÚT
+
+import face_recognition
+import cv2
+import os
+from PIL import ImageFont, ImageDraw, Image
+import numpy as np
+
+# Đọc ảnh trong thư mục known_faces
+known_face_encodings = []
+known_face_names = []
+
+known_dir = "known_faces"
+for filename in os.listdir(known_dir):
+    if filename.endswith(".jpg") or filename.endswith(".png"):
+        image_path = os.path.join(known_dir, filename)
+        image = face_recognition.load_image_file(image_path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            known_face_encodings.append(encodings[0])
+            name = os.path.splitext(filename)[0]
+            known_face_names.append(name)
+
+# Khởi tạo webcam
+cap = cv2.VideoCapture(0)
+
+# Font hỗ trợ tiếng Việt
+font_path = "arial.ttf"  # Đảm bảo file này tồn tại trong thư mục hiện tại
+font_pil = ImageFont.truetype(font_path, 32)
+
+# Biến đếm frame
+frame_count = 0
+face_locations = []
+face_encodings = []
+found_name = ""
+found = False
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Tăng số frame
+    frame_count += 1
+
+    # Resize để tăng tốc độ
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+    # Chỉ xử lý nhận diện mỗi 5 frame
+    if frame_count % 5 == 0:
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+        found = False
+        found_name = ""
+
+        for face_encoding in face_encodings:
+            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+            name = "Unknown"
+
+            if True in matches:
+                first_match_index = matches.index(True)
+                name = known_face_names[first_match_index]
+                found = True
+                found_name = name
+
+    # Vẽ khung quanh khuôn mặt
+    for (top, right, bottom, left) in face_locations:
+        top *= 4
+        right *= 4
+        bottom *= 4
+        left *= 4
+        color = (0, 255, 0) if found else (0, 0, 255)
+        cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+
+    # Sử dụng PIL để vẽ tiếng Việt
+    frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(frame_pil)
+
+    # Hiển thị trạng thái
+    status_text = "Thành công" if found else "Không tìm thấy"
+    draw.text((10, 10), status_text, font=font_pil, fill=(0, 255, 0) if found else (255, 0, 0))
+
+    # Tên người được nhận diện sát góc phải
+    if found_name:
+        bbox = draw.textbbox((0, 0), found_name, font=font_pil)
+        text_width = bbox[2] - bbox[0]
+        x = frame.shape[1] - text_width - 10
+        y = 10
+        draw.text((x, y), found_name, font=font_pil, fill=(0, 255, 0))
+
+    # Chuyển lại sang OpenCV để hiển thị
+    frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
+
+    # Hiển thị lên màn hình
+    cv2.imshow("Nhan dien khuon mat", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+CODE QUÉT MẶT KHÔNG LAG (NHƯNG KHÔNG FOCUS VÀO MẶT)
+
+import face_recognition
+import cv2
+import os
+from PIL import ImageFont, ImageDraw, Image
+import numpy as np
+import time
+
+# Load ảnh khuôn mặt đã biết
+known_face_encodings = []
+known_face_names = []
+
+known_dir = "known_faces"
+for filename in os.listdir(known_dir):
+    if filename.lower().endswith((".jpg", ".png")):
+        image_path = os.path.join(known_dir, filename)
+        image = face_recognition.load_image_file(image_path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            known_face_encodings.append(encodings[0])
+            known_face_names.append(os.path.splitext(filename)[0])
+
+# Mở webcam
+cap = cv2.VideoCapture(0)
+
+# Font tiếng Việt
+font_path = "arial.ttf"
+font_pil = ImageFont.truetype(font_path, 32)
+
+# Khởi tạo biến
+frame_count = 0
+face_locations = []
+face_encodings = []
+found_name = ""
+found = False
+last_found_time = 0
+skip_recognition_until = 0  # Không nhận diện cho đến thời điểm này
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    frame_count += 1
+    current_time = time.time()
+
+    # Giảm kích thước ảnh để tăng tốc độ xử lý
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+    # Nhận diện khuôn mặt mỗi 5 frame nếu không trong thời gian tạm dừng
+    if current_time > skip_recognition_until and frame_count % 5 == 0:
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+        found = False
+        found_name = ""
+
+        for face_encoding in face_encodings:
+            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+            name = "Unknown"
+            if True in matches:
+                first_match_index = matches.index(True)
+                name = known_face_names[first_match_index]
+                found = True
+                found_name = name
+                last_found_time = current_time
+                skip_recognition_until = current_time + 10  # Tạm ngưng nhận diện trong 10 giây
+                break  # Đã nhận diện xong 1 khuôn mặt thì dừng luôn
+
+    # Vẽ khung trong 3 giây sau khi nhận diện được
+    draw_box = current_time < last_found_time + 5
+
+    # Vẽ khung quanh khuôn mặt nếu cần
+    if draw_box:
+        for (top, right, bottom, left) in face_locations:
+            top *= 4
+            right *= 4
+            bottom *= 4
+            left *= 4
+            color = (0, 255, 0) if found else (0, 0, 255)
+            cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+
+    # Dùng PIL để hiển thị text tiếng Việt
+    frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(frame_pil)
+
+    # Trạng thái
+    status_text = "Thành công" if found_name else "Không tìm thấy"
+    draw.text((10, 10), status_text, font=font_pil, fill=(0, 255, 0) if found_name else (255, 0, 0))
+
+    # Hiển thị tên người
+    if found_name:
+        bbox = draw.textbbox((0, 0), found_name, font=font_pil)
+        text_width = bbox[2] - bbox[0]
+        x = frame.shape[1] - text_width - 10
+        y = 10
+        draw.text((x, y), found_name, font=font_pil, fill=(0, 255, 0))
+
+    # Quay lại OpenCV để hiển thị
+    frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
+    cv2.imshow("Nhan dien khuon mat", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+CODE NÀY ỔN NHẤT ( VỪA NHANH VỪA ĐẾM THỜI GIAN RESET )
+
+import face_recognition
+import cv2
+import os
+from PIL import ImageFont, ImageDraw, Image
+import numpy as np
+import time
+
+# Load ảnh khuôn mặt đã biết
+known_face_encodings = []
+known_face_names = []
+
+known_dir = "known_faces"
+for filename in os.listdir(known_dir):
+    if filename.lower().endswith((".jpg", ".png")):
+        image_path = os.path.join(known_dir, filename)
+        image = face_recognition.load_image_file(image_path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            known_face_encodings.append(encodings[0])
+            known_face_names.append(os.path.splitext(filename)[0])
+
+# Mở webcam
+cap = cv2.VideoCapture(0)
+
+# Font tiếng Việt
+font_path = "arial.ttf"
+font_pil = ImageFont.truetype(font_path, 32)
+
+# Khởi tạo biến
+frame_count = 0
+face_locations = []
+face_encodings = []
+found_name = ""
+found = False
+last_found_time = 0
+skip_recognition_until = 0
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    frame_count += 1
+    current_time = time.time()
+
+    # Resize ảnh để xử lý nhanh hơn
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+    # Nếu đang trong khoảng 5 giây sau khi nhận diện, chỉ update vị trí khuôn mặt
+    if current_time < last_found_time + 5:
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+
+    # Nếu đã hết 10s thì cho phép nhận diện lại
+    elif current_time > skip_recognition_until and frame_count % 5 == 0:
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+        found = False
+        found_name = ""
+
+        for face_encoding in face_encodings:
+            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+            name = "Unknown"
+            if True in matches:
+                first_match_index = matches.index(True)
+                name = known_face_names[first_match_index]
+                found = True
+                found_name = name
+                last_found_time = current_time
+                skip_recognition_until = current_time + 10
+                break
+
+    # Chỉ vẽ khung trong 5 giây sau khi nhận diện
+    draw_box = current_time < last_found_time + 5
+
+    if draw_box:
+        for (top, right, bottom, left) in face_locations:
+            top *= 4
+            right *= 4
+            bottom *= 4
+            left *= 4
+            color = (0, 255, 0) if found else (0, 0, 255)
+            cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+
+    # Dùng PIL để vẽ text Unicode
+    frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(frame_pil)
+
+    # Trạng thái hiển thị
+    status_text = "Thành công" if found_name else "Không tìm thấy"
+    draw.text((10, 10), status_text, font=font_pil, fill=(0, 255, 0) if found_name else (255, 0, 0))
+
+    # Hiển thị tên người
+    if found_name:
+        bbox = draw.textbbox((0, 0), found_name, font=font_pil)
+        text_width = bbox[2] - bbox[0]
+        x = frame.shape[1] - text_width - 10
+        y = 10
+        draw.text((x, y), found_name, font=font_pil, fill=(0, 255, 0))
+
+    frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
+    cv2.imshow("Nhan dien khuon mat", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+CODE CHẠY ỔN NHƯNG CHƯA QUÉT MẶT LIÊN TỤC
+
+import face_recognition
+import cv2
+import os
+from PIL import ImageFont, ImageDraw, Image
+import numpy as np
+import time
+
+# Load ảnh khuôn mặt đã biết
+known_face_encodings = []
+known_face_names = []
+
+known_dir = "known_faces"
+for filename in os.listdir(known_dir):
+    if filename.lower().endswith((".jpg", ".png")):
+        image_path = os.path.join(known_dir, filename)
+        image = face_recognition.load_image_file(image_path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            known_face_encodings.append(encodings[0])
+            known_face_names.append(os.path.splitext(filename)[0])
+
+# Mở webcam
+cap = cv2.VideoCapture(0)
+
+# Font tiếng Việt
+font_path = "arial.ttf"
+font_pil = ImageFont.truetype(font_path, 32)
+
+# Khởi tạo biến
+frame_count = 0
+face_locations = []
+face_encodings = []
+found_name = ""
+found = False
+last_found_time = 0
+reset_required = False  # Dùng để tạm dừng nhận diện sau 5s và reset lại
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    frame_count += 1
+    current_time = time.time()
+
+    # Resize ảnh để xử lý nhanh hơn
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+    # Kiểm tra nếu đã tìm thấy và 5s đã trôi qua
+    if found and current_time - last_found_time >= 5:
+        # Sau 5s: reset để bắt đầu quét lại
+        found = False
+        found_name = ""
+        face_locations = []
+        reset_required = False
+        continue  # Bỏ qua khung hình này, chuyển sang khung tiếp theo
+
+    # Nếu đang trong trạng thái reset, không quét khuôn mặt
+    if not found and not reset_required and frame_count % 5 == 0:
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+        for face_encoding in face_encodings:
+            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+            if True in matches:
+                first_match_index = matches.index(True)
+                found_name = known_face_names[first_match_index]
+                found = True
+                last_found_time = current_time
+                reset_required = True  # Chờ 5s rồi mới reset lại
+                break
+
+    elif found:
+        # Nếu đang trong thời gian 5s, chỉ cập nhật vị trí khuôn mặt
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+
+    # Vẽ chữ bằng PIL
+    frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(frame_pil)
+
+    if found:
+        # Hiển thị chữ "Thành công" và tên
+        draw.text((10, 10), "Thành công", font=font_pil, fill=(0, 255, 0))
+        if found_name:
+            bbox = draw.textbbox((0, 0), found_name, font=font_pil)
+            text_width = bbox[2] - bbox[0]
+            x = frame.shape[1] - text_width - 10
+            y = 10
+            draw.text((x, y), found_name, font=font_pil, fill=(0, 255, 0))
+    elif not reset_required:
+        # Hiển thị chữ "Không tìm thấy"
+        draw.text((10, 10), "Không tìm thấy", font=font_pil, fill=(255, 0, 0))
+
+    # Chuyển PIL về numpy để hiển thị
+    frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
+
+    # Vẽ khung cho khuôn mặt trên frame numpy
+    if found:
+        for (top, right, bottom, left) in face_locations:
+            top *= 4
+            right *= 4
+            bottom *= 4
+            left *= 4
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+    elif not reset_required:
+        for (top, right, bottom, left) in face_locations:
+            top *= 4
+            right *= 4
+            bottom *= 4
+            left *= 4
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+
+    # Hiển thị ảnh
+    cv2.imshow("Nhan dien khuon mat", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+
+CÀI THƯ VIỆN DÙNG CHO CODE EXCEL
+pip install openpyxl pillow
+
+
+
+
+CODE CHẠY EXCEL
+
+import face_recognition
+import cv2
+import os
+from PIL import ImageFont, ImageDraw, Image
+import numpy as np
+import time
+import openpyxl
+from openpyxl.drawing.image import Image as XLImage
+from datetime import datetime
+import unicodedata
+
+# === Cấu hình ===
+KNOWN_DIR = "known_faces"
+CAPTURE_DIR = "captures"
+EXCEL_PATH = r"D:\Project Python\nhan-dang-khuon-mat\diem_danh\dsdiemdanh.xlsx"
+FONT_PATH = "arial.ttf"
+
+os.makedirs(CAPTURE_DIR, exist_ok=True)
+font_pil = ImageFont.truetype(FONT_PATH, 32)
+
+# === Hàm bỏ dấu tiếng Việt (dùng cho tên file) ===
+def remove_diacritics(text):
+    return ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
+
+# === Load khuôn mặt đã biết ===
+known_face_encodings = []
+known_face_names = []
+
+for filename in os.listdir(KNOWN_DIR):
+    if filename.lower().endswith((".jpg", ".png")):
+        path = os.path.join(KNOWN_DIR, filename)
+        image = face_recognition.load_image_file(path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            known_face_encodings.append(encodings[0])
+            name = os.path.splitext(filename)[0]
+            known_face_names.append(name)
+
+# === Ghi vào Excel khi tìm thấy ===
+def save_to_excel(name, frame):
+    try:
+        wb = openpyxl.load_workbook(EXCEL_PATH)
+        ws = wb.active
+
+        # Chụp ảnh và lưu file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = remove_diacritics(name).replace(" ", "_")
+        image_filename = f"{safe_name}_{timestamp}.jpg"
+        image_path = os.path.join(CAPTURE_DIR, image_filename)
+        cv2.imwrite(image_path, frame)
+
+        # Ghi thông tin điểm danh vào Excel
+        name_found = False
+        for row in ws.iter_rows(min_row=2, min_col=1, max_col=1):
+            cell = row[0]
+            if cell.value and cell.value.strip().lower() == name.strip().lower():
+                row_idx = cell.row
+                ws.cell(row=row_idx, column=2).value = "Có"
+                ws.cell(row=row_idx, column=3).value = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                img = XLImage(image_path)
+                img.width, img.height = 100, 100
+                img.anchor = f"D{row_idx}"
+                ws.add_image(img)
+                name_found = True
+                break
+
+        if not name_found:
+            row_idx = ws.max_row + 1
+            ws.cell(row=row_idx, column=1).value = name
+            ws.cell(row=row_idx, column=2).value = "Không"
+            ws.cell(row=row_idx, column=3).value = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        wb.save(EXCEL_PATH)
+        return True
+    except Exception as e:
+        print("Lỗi khi thêm ảnh vào Excel:", e)
+        return False
+
+# === Camera và xử lý nhận diện ===
+cap = cv2.VideoCapture(0)
+found = False
+found_name = ""
+last_found_time = 0
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    rgb_small = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+    if found:
+        if time.time() - last_found_time >= 3:
+            found = False
+            found_name = ""
+        else:
+            # Hiển thị lại trong 3 giây
+            face_locations = face_recognition.face_locations(rgb_small)
+            face_locations = [(t*4, r*4, b*4, l*4) for (t, r, b, l) in face_locations]
+            for (top, right, bottom, left) in face_locations:
+                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+
+            img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            draw = ImageDraw.Draw(img_pil)
+            draw.text((10, 10), f"Thành công: {found_name}", font=font_pil, fill=(0, 255, 0))
+            frame = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+
+            cv2.imshow("Nhan dien khuon mat", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            continue
+
+    # Nhận diện khuôn mặt mới
+    face_locations = face_recognition.face_locations(rgb_small)
+    face_encodings = face_recognition.face_encodings(rgb_small, face_locations)
+
+    recognized = False
+    for face_encoding, face_location in zip(face_encodings, face_locations):
+        matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+        if True in matches:
+            index = matches.index(True)
+            name = known_face_names[index]
+            safe_name = remove_diacritics(name).replace(" ", "_")
+
+            already_captured = any(safe_name in f for f in os.listdir(CAPTURE_DIR))
+            face_location = tuple(x * 4 for x in face_location)
+            top, right, bottom, left = face_location
+
+            if not already_captured:
+                time.sleep(1)  # đợi camera ổn định
+                if save_to_excel(name, frame):
+                    found = True
+                    found_name = name
+                    last_found_time = time.time()
+                    recognized = True
+                    break
+            else:
+                # Đã điểm danh trước đó
+                found = True
+                found_name = name
+                last_found_time = time.time()
+                recognized = True
+                break
+
+    # Nếu không nhận diện được
+    if not recognized:
+        face_locations = [(t*4, r*4, b*4, l*4) for (t, r, b, l) in face_locations]
+        for (top, right, bottom, left) in face_locations:
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+
+        img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        draw = ImageDraw.Draw(img_pil)
+        draw.text((10, 10), "Không tìm thấy", font=font_pil, fill=(255, 0, 0))
+        frame = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+
+    cv2.imshow("Nhan dien khuon mat", frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+
+CODE HOÀN CHỈNH + COMMENT (CHỈ CHẠY MÁY TÔI)
+
+# === Import các thư viện cần thiết ===
+import face_recognition  # Thư viện nhận diện khuôn mặt
+import cv2               # Thư viện xử lý ảnh và video
+import os                # Thư viện làm việc với hệ thống tệp
+from PIL import ImageFont, ImageDraw, Image  # Để vẽ text có dấu tiếng Việt
+import numpy as np       # Xử lý mảng
+import time              # Thư viện thao tác thời gian
+import openpyxl          # Làm việc với file Excel
+from openpyxl.drawing.image import Image as XLImage  # Chèn hình ảnh vào Excel
+from datetime import datetime  # Lấy ngày giờ hiện tại
+import unicodedata       # Dùng để loại bỏ dấu tiếng Việt
+
+# === Cấu hình đường dẫn ===
+KNOWN_DIR = "known_faces"  # Thư mục chứa ảnh khuôn mặt đã biết
+CAPTURE_DIR = "captures"   # Thư mục lưu ảnh khi điểm danh
+EXCEL_PATH = r"D:\Project Python\nhan-dang-khuon-mat\diem_danh\dsdiemdanh.xlsx"  # File Excel điểm danh
+FONT_PATH = "arial.ttf"    # Font để hiển thị chữ có dấu trên ảnh
+
+# === Tạo thư mục lưu ảnh nếu chưa có ===
+os.makedirs(CAPTURE_DIR, exist_ok=True)
+
+# === Load font để hiển thị tiếng Việt ===
+font_pil = ImageFont.truetype(FONT_PATH, 32)
+
+# === Hàm loại bỏ dấu tiếng Việt (cho tên file ảnh) ===
+def remove_diacritics(text):
+    return ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
+
+# === Load dữ liệu khuôn mặt đã biết từ thư mục known_faces ===
+known_face_encodings = []  # Danh sách vector đặc trưng khuôn mặt
+known_face_names = []      # Danh sách tên tương ứng
+
+for filename in os.listdir(KNOWN_DIR):
+    if filename.lower().endswith((".jpg", ".png")):
+        path = os.path.join(KNOWN_DIR, filename)
+        image = face_recognition.load_image_file(path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            known_face_encodings.append(encodings[0])  # Lưu vector khuôn mặt
+            name = os.path.splitext(filename)[0]        # Tên là tên file không phần mở rộng
+            known_face_names.append(name)
+
+# === Hàm ghi thông tin và ảnh vào file Excel ===
+def save_to_excel(name, frame):
+    try:
+        wb = openpyxl.load_workbook(EXCEL_PATH)
+        ws = wb.active
+
+        # Tạo tên file ảnh và lưu ảnh
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = remove_diacritics(name).replace(" ", "_")
+        image_filename = f"{safe_name}_{timestamp}.jpg"
+        image_path = os.path.join(CAPTURE_DIR, image_filename)
+        cv2.imwrite(image_path, frame)
+
+        name_found = False
+        # Duyệt file Excel xem tên có sẵn không
+        for row in ws.iter_rows(min_row=2, min_col=1, max_col=1):
+            cell = row[0]
+            if cell.value and cell.value.strip().lower() == name.strip().lower():
+                row_idx = cell.row
+                ws.cell(row=row_idx, column=2).value = "Có"  # Đã điểm danh
+                ws.cell(row=row_idx, column=3).value = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Thời gian
+
+                # Thêm ảnh vào ô
+                img = XLImage(image_path)
+                img.width, img.height = 100, 100
+                img.anchor = f"D{row_idx}"
+                ws.add_image(img)
+                name_found = True
+                break
+
+        if not name_found:
+            # Nếu tên chưa có thì thêm mới và ghi là "Không"
+            row_idx = ws.max_row + 1
+            ws.cell(row=row_idx, column=1).value = name
+            ws.cell(row=row_idx, column=2).value = "Không"
+            ws.cell(row=row_idx, column=3).value = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        wb.save(EXCEL_PATH)
+        return True
+    except Exception as e:
+        print("Lỗi khi thêm ảnh vào Excel:", e)
+        return False
+
+# === Bắt đầu camera ===
+cap = cv2.VideoCapture(0)
+found = False             # Đã nhận diện ai đó chưa
+found_name = ""           # Tên người nhận diện được
+last_found_time = 0       # Thời điểm nhận diện cuối
+is_new_capture = False    # Có phải vừa mới chụp không
+
+# === Vòng lặp chính để xử lý nhận diện khuôn mặt ===
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Giảm kích thước khung hình để xử lý nhanh hơn
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    rgb_small = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+    # Nếu đã nhận diện, chờ 3 giây mới quét tiếp
+    if found:
+        if time.time() - last_found_time >= 3:
+            found = False
+            found_name = ""
+            is_new_capture = False
+        else:
+            # Vẽ lại khung mặt và hiện tên
+            face_locations = face_recognition.face_locations(rgb_small)
+            face_locations = [(t*4, r*4, b*4, l*4) for (t, r, b, l) in face_locations]
+            for (top, right, bottom, left) in face_locations:
+                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+
+            # Hiển thị chữ: Thành công hoặc Đã điểm danh
+            img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            draw = ImageDraw.Draw(img_pil)
+            msg = f"Thành công: {found_name}" if is_new_capture else f"Đã điểm danh: {found_name}"
+            draw.text((10, 10), msg, font=font_pil, fill=(0, 255, 0))
+            frame = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+
+            cv2.imshow("Nhan dien khuon mat", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            continue
+
+    # Nhận diện khuôn mặt mới
+    face_locations = face_recognition.face_locations(rgb_small)
+    face_encodings = face_recognition.face_encodings(rgb_small, face_locations)
+
+    recognized = False  # Cờ kiểm tra có ai được nhận diện không
+
+    for face_encoding, face_location in zip(face_encodings, face_locations):
+        matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+        if True in matches:
+            index = matches.index(True)
+            name = known_face_names[index]
+            safe_name = remove_diacritics(name).replace(" ", "_")
+
+            # Kiểm tra xem đã chụp ảnh trước đó chưa
+            already_captured = any(safe_name in f for f in os.listdir(CAPTURE_DIR))
+            face_location = tuple(x * 4 for x in face_location)
+            top, right, bottom, left = face_location
+
+            if not already_captured:
+                time.sleep(1)  # Đợi camera ổn định
+                if save_to_excel(name, frame):
+                    found = True
+                    found_name = name
+                    last_found_time = time.time()
+                    is_new_capture = True
+                    recognized = True
+                    break
+            else:
+                found = True
+                found_name = name
+                last_found_time = time.time()
+                is_new_capture = False
+                recognized = True
+                break
+
+    # Nếu không nhận diện được ai
+    if not recognized:
+        face_locations = [(t*4, r*4, b*4, l*4) for (t, r, b, l) in face_locations]
+        for (top, right, bottom, left) in face_locations:
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+
+        # Vẽ chữ "Không tìm thấy" lên ảnh
+        img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        draw = ImageDraw.Draw(img_pil)
+        draw.text((10, 10), "Không tìm thấy", font=font_pil, fill=(255, 0, 0))
+        frame = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+
+    # Hiển thị khung hình
+    cv2.imshow("Nhan dien khuon mat", frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# === Giải phóng tài nguyên ===
+cap.release()
+cv2.destroyAllWindows()
+
+
+
+
+
+
+HƯỚNG DẪN CHẠY APP
+
+D:\Project Python\nhan-dang-khuon-mat
+venv\Scripts\activate
+python scanface.py
+Trước khi chạy phải xóa ảnh captures và xóa các cột dữ liệu trong excel
+Lưu ý: Nếu đã điểm danh thì sẽ không add data và không lưu ảnh nữa
+
+
+
+CODE CHẠY HOÀN CHỈNH + FIX ĐƯỜNG DẪN ĐỂ CHẠY .EXE VÀ .PY
+
+
+# === Import các thư viện cần thiết ===
+import face_recognition
+import cv2
+import os
+import sys
+from PIL import ImageFont, ImageDraw, Image
+import numpy as np
+import time
+import openpyxl
+from openpyxl.drawing.image import Image as XLImage
+from datetime import datetime
+import unicodedata
+
+# === Hàm xử lý đường dẫn dùng được cho cả .py và .exe ===
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS  # Dùng khi chạy exe
+    except AttributeError:
+        base_path = os.path.abspath(".")  # Dùng khi chạy script .py
+    return os.path.join(base_path, relative_path)
+
+# === Cấu hình đường dẫn ===
+KNOWN_DIR = resource_path("known_faces")  # Thư mục chứa ảnh khuôn mặt đã biết
+CAPTURE_DIR = resource_path("captures")   # Thư mục lưu ảnh khi điểm danh
+EXCEL_PATH = resource_path("diem_danh/dsdiemdanh.xlsx")  # File Excel điểm danh
+FONT_PATH = resource_path("arial.ttf")    # Font để hiển thị chữ có dấu trên ảnh
+
+# === Tạo thư mục lưu ảnh nếu chưa có ===
+os.makedirs(CAPTURE_DIR, exist_ok=True)
+
+# === Load font để hiển thị tiếng Việt ===
+font_pil = ImageFont.truetype(FONT_PATH, 32)
+
+# === Hàm loại bỏ dấu tiếng Việt (cho tên file ảnh) ===
+def remove_diacritics(text):
+    return ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
+
+# === Load dữ liệu khuôn mặt đã biết từ thư mục known_faces ===
+known_face_encodings = []
+known_face_names = []
+
+for filename in os.listdir(KNOWN_DIR):
+    if filename.lower().endswith((".jpg", ".png")):
+        path = os.path.join(KNOWN_DIR, filename)
+        image = face_recognition.load_image_file(path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            known_face_encodings.append(encodings[0])
+            name = os.path.splitext(filename)[0]
+            known_face_names.append(name)
+
+# === Hàm ghi thông tin và ảnh vào file Excel ===
+def save_to_excel(name, frame):
+    try:
+        wb = openpyxl.load_workbook(EXCEL_PATH)
+        ws = wb.active
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = remove_diacritics(name).replace(" ", "_")
+        image_filename = f"{safe_name}_{timestamp}.jpg"
+        image_path = os.path.join(CAPTURE_DIR, image_filename)
+        cv2.imwrite(image_path, frame)
+
+        name_found = False
+        for row in ws.iter_rows(min_row=2, min_col=1, max_col=1):
+            cell = row[0]
+            if cell.value and cell.value.strip().lower() == name.strip().lower():
+                row_idx = cell.row
+                ws.cell(row=row_idx, column=2).value = "Có"
+                ws.cell(row=row_idx, column=3).value = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                img = XLImage(image_path)
+                img.width, img.height = 100, 100
+                img.anchor = f"D{row_idx}"
+                ws.add_image(img)
+                name_found = True
+                break
+
+        if not name_found:
+            row_idx = ws.max_row + 1
+            ws.cell(row=row_idx, column=1).value = name
+            ws.cell(row=row_idx, column=2).value = "Không"
+            ws.cell(row=row_idx, column=3).value = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        wb.save(EXCEL_PATH)
+        return True
+    except Exception as e:
+        print("Lỗi khi thêm ảnh vào Excel:", e)
+        return False
+
+# === Bắt đầu camera ===
+cap = cv2.VideoCapture(0)
+found = False
+found_name = ""
+last_found_time = 0
+is_new_capture = False
+
+# === Vòng lặp chính để xử lý nhận diện khuôn mặt ===
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    rgb_small = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+    if found:
+        if time.time() - last_found_time >= 3:
+            found = False
+            found_name = ""
+            is_new_capture = False
+        else:
+            face_locations = face_recognition.face_locations(rgb_small)
+            face_locations = [(t*4, r*4, b*4, l*4) for (t, r, b, l) in face_locations]
+            for (top, right, bottom, left) in face_locations:
+                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+
+            img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            draw = ImageDraw.Draw(img_pil)
+            msg = f"Thành công: {found_name}" if is_new_capture else f"Đã điểm danh: {found_name}"
+            draw.text((10, 10), msg, font=font_pil, fill=(0, 255, 0))
+            frame = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+
+            cv2.imshow("Nhan dien khuon mat", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            continue
+
+    face_locations = face_recognition.face_locations(rgb_small)
+    face_encodings = face_recognition.face_encodings(rgb_small, face_locations)
+
+    recognized = False
+
+    for face_encoding, face_location in zip(face_encodings, face_locations):
+        matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+        if True in matches:
+            index = matches.index(True)
+            name = known_face_names[index]
+            safe_name = remove_diacritics(name).replace(" ", "_")
+
+            already_captured = any(safe_name in f for f in os.listdir(CAPTURE_DIR))
+            face_location = tuple(x * 4 for x in face_location)
+            top, right, bottom, left = face_location
+
+            if not already_captured:
+                time.sleep(1)
+                if save_to_excel(name, frame):
+                    found = True
+                    found_name = name
+                    last_found_time = time.time()
+                    is_new_capture = True
+                    recognized = True
+                    break
+            else:
+                found = True
+                found_name = name
+                last_found_time = time.time()
+                is_new_capture = False
+                recognized = True
+                break
+
+    if not recognized:
+        face_locations = [(t*4, r*4, b*4, l*4) for (t, r, b, l) in face_locations]
+        for (top, right, bottom, left) in face_locations:
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+
+        img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        draw = ImageDraw.Draw(img_pil)
+        draw.text((10, 10), "Không tìm thấy", font=font_pil, fill=(255, 0, 0))
+        frame = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+
+    cv2.imshow("Nhan dien khuon mat", frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# === Giải phóng tài nguyên ===
+cap.release()
+cv2.destroyAllWindows()
+
+
+
+CÀI THƯ VIỆN ĐỂ ĐÓNG GÓI FILE .EXE
+pip install pyinstaller
+
+LỆNH ĐÓNG GÓI FILE .EXE
+VD:
+pyinstaller scanface.py --noconsole --onefile `
+--add-data "arial.ttf:." `
+--add-data "known_faces:known_faces" `
+--add-data "diem_danh/dsdiemdanh.xlsx:diem_danh"
+
+
+
+CÁCH FIX LỖI ĐÓNG GÓI .EXE KHI CHẠY LỆNH 
+
+Lỗi thiếu 4 file:
+RuntimeError: Unable to open C:\Users\[username]\AppData\Local\Temp\_MEIxxxxx\face_recognition_models\models\shape_predictor_68_face_landmarks.dat
+RuntimeError: Unable to open ...\face_recognition_models\models\shape_predictor_5_face_landmarks.dat
+RuntimeError: Unable to open ...\face_recognition_models\models\mmod_human_face_detector.dat
+RuntimeError: Unable to open ...\face_recognition_models\models\dlib_face_recognition_resnet_model_v1.dat
+
+Tải folder trên link về nhét vào là được (Nhét vào folder nhan-dang-khuon-mat)
+Link: https://github.com/ageitgey/face_recognition
+
+Nhét xong thì sửa file spec và chạy lệnh terminal lại
+Sửa nội dung sau trong file, cập nhật thêm 4 file .dat face_recognition vào:
+datas=[
+    ('arial.ttf', '.'), 
+    ('known_faces', 'known_faces'),
+    ('diem_danh/dsdiemdanh.xlsx', 'diem_danh'),
+    ('face_recognition_models/models/shape_predictor_68_face_landmarks.dat', 'face_recognition_models/models'),
+    ('face_recognition_models/models/shape_predictor_5_face_landmarks.dat', 'face_recognition_models/models'),
+    ('face_recognition_models/models/mmod_human_face_detector.dat', 'face_recognition_models/models'),
+    ('face_recognition_models/models/dlib_face_recognition_resnet_model_v1.dat', 'face_recognition_models/models')
+],
+Rồi chạy lệnh pyinstaller scanface.spec để cập nhật lại Rồi chạy file exe 
+
